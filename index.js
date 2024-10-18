@@ -2,10 +2,8 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const Message = require("./models/message_model");
-const { protect, generateToken } = require("./middleware/auth_middleware");
-const User = require("./models/user_model");
+const { protect } = require("./middleware/auth_middleware");
 const mongoose = require("mongoose");
-const jwt = require("jsonwebtoken");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -23,9 +21,6 @@ mongoose.connect('mongodb://localhost:27017/chat_message')
 io.on("connection", (socket) => {
     console.log("A user connected");
 
-    socket.on("disconnect", () => {
-        console.log("User disconnected");
-    });
 
     socket.on("register", (userId) => {
         users[userId] = socket.id;
@@ -57,6 +52,11 @@ io.on("connection", (socket) => {
             console.error("Error saving message:", error);
         }
     });
+    socket.on("chat message", (data) => {
+        const { from, message } = data;
+        console.log(`Message from ${from}: ${message}`);
+        // You can display the message in the UI here
+    });
 
     socket.on("disconnect", () => {
         console.log("User disconnected");
@@ -68,11 +68,11 @@ io.on("connection", (socket) => {
         }
     });  
 });
-
+ 
 
 app.use("/api/auth", require("./routes/auth"));
-app.use("/api/messages", protect, require("./routes/message"));
-
+const messageRoutes = require("./routes/message")(io, users);  // Pass io and users to the message routes
+app.use("/api/messages", messageRoutes);
 
 ///Middleware to Protect Routes
 

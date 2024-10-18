@@ -1,19 +1,22 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
-const {  generateToken } = require("../middleware/auth_middleware");
+const {  generateToken, protect } = require("../middleware/auth_middleware");
 const User = require("../models/user_model");
 const jwt = require("jsonwebtoken");
 
 const router = express.Router();
+
+/// login
+
 router.post("/login", async (req, res) => {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
     const user = await User.findOne({
-        username
+        email
     });
     if (!user && (await user.correctPassword(password, user.password))) {
         return res.status(401).json({
             status: false,
-            message: "Invalid username or password"
+            message: "Invalid email or password"
         });
 
     }
@@ -22,6 +25,9 @@ router.post("/login", async (req, res) => {
         token: generateToken(user)
     })
 });
+
+/// registration 
+
 router.post('/register',async(req, res)=>{
 const{username, email,password}=req.body;
 try{
@@ -53,4 +59,33 @@ try{
     res.status(500).json({status: false, message:'server issue'})
 }
 });
+
+/// All user///
+
+router.get('/users', async(req, res)=>{
+    try{
+const users = await User.find({});
+const usersWithTokens = users.map(user=>{
+    return {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        
+    };
+});
+res.json({
+    status: true,
+    users: usersWithTokens
+});
+    }catch(e){
+console.error("Error retrieving users", e);
+res.status(500).json({
+    status: false,
+    message:"failed to fatch users"
+})
+    }
+})
+router.get('/userInfo', protect, (req,res)=>{
+    res.json(req.user);
+})
 module.exports = router;

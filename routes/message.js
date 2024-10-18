@@ -1,24 +1,41 @@
-const express = require("express");
+module.exports= function(io,users)
+{const express = require("express");
 const Message = require("../models/message_model");
 const { protect } = require("../middleware/auth_middleware");
+const User = require("../models/user_model");
 
 const router = express.Router();
 router.post("/sendMessage",protect, async(req, res)=>{
     const{to, message}=req.body;
     const from =req.user.id;
-    const newMessage = new Message({
-        from,
-        to,
-        message
-      });
+    
       try{
+        const recipient = await User.findById(to)
+        if(!recipient){
+          return res.status(404).json({ status: false, message: "Recipient not found" });
+
+        }
+        const newMessage = new Message({
+          from,
+          to,
+          message
+        });
         await newMessage.save();
+        const targetSocketID =users[to];
+        if(targetSocketID){
+          io.to(targetSocketID).emit("chat message",{from, message});
+        }else {
+            // The user is offline, consider sending a notification here
+            console.log(`User ${to} is offline. Consider sending a notification.`);
+            // Example: sendNotification(to, "You have a new message!");
+        }
         res.json({status: true,message:"Message sent"})
       }catch (error) {
-        res.status(500).json({status: false, message: "Error sending message" });
+        console.log(error);
+        res.status(500).json({status: false, message: "Error sending message " });
       }
     });
-    router.get('/messages', async (req, res) => { 
+    router.get('/getMessages',protect, async (req, res) => { 
         const { user1, user2 } = req.query;
         const currentUserId=req.user.id;
         if (currentUserId !== user1 && currentUserId !== user2) {
@@ -36,4 +53,5 @@ router.post("/sendMessage",protect, async(req, res)=>{
             res.status(500).send('Error retrieving messages');
         }
     });
-    module.exports=router;
+    return router;
+}
