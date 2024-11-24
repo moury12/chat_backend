@@ -24,12 +24,20 @@ io.on("connection", (socket) => {
 
     socket.on("register", (userId) => {
         users[userId] = socket.id;
+        if (!userId) {
+            console.error("User ID is required for registration");
+            return;
+        }
         console.log(`User ${userId} is connected with socket ID: ${socket.id}`);
     });
 
     socket.on("private message", async (data) => {
         const { from, to, message } = data;
+if(!data || !data.from || !data.to ||!data.message){
+    console.error("Invalid data received for private message:", data);
 
+    return;
+}
         // Create a new instance of the Message model
         const newMessage = new Message({
             from: from,
@@ -63,6 +71,7 @@ io.on("connection", (socket) => {
         for (let userId in users) {
             if (users[userId] === socket.id) {
                 delete users[userId];
+                io.emit("user disconnected", { userId });
                 break;
             }
         }
