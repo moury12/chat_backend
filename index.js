@@ -51,6 +51,10 @@ if(!data || !data.from || !data.to ||!data.message){
 
             const targetSocketID = users[to];
             if (targetSocketID) {
+                io.to(targetSocketID).emit("notification", {
+                    from: from,
+                    message: message
+                });
                 io.to(targetSocketID).emit("chat message", {
                     from: from,
                     message: message
@@ -65,13 +69,18 @@ if(!data || !data.from || !data.to ||!data.message){
         console.log(`Message from ${from}: ${message}`);
         // You can display the message in the UI here
     });
+    socket.on("notification", (data) => {
+        const { from, message } = data;
+        console.log(`notication from ${from}: ${message}`);
+        // You can display the message in the UI here
+    });
 
     socket.on("disconnect", () => {
         console.log("User disconnected");
         for (let userId in users) {
             if (users[userId] === socket.id) {
                 delete users[userId];
-                io.emit("user disconnected", { userId });
+                 io.emit("user disconnected", { userId });
                 break;
             }
         }
